@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: dev.naamloos.pokerface
 productName: pokerface
 directories:
   buildResources: build

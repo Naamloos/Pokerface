@@ -23,10 +23,15 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
+    "@mapbox/node-pre-gyp": "^1.0.0",
     "@tailwindcss/vite": "^4.0.17",
+    "isomorphic-git": "^1.30.1",
     "ogl": "^1.0.11",
+    "react-markdown": "^10.1.0",
     "react-router": "^7.4.0",
-    "tailwindcss": "^4.0.17"
+    "rimraf": "^4.0.0",
+    "tailwindcss": "^4.0.17",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

@@ -1,141 +1,187 @@
 import { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
-
-interface Mod {
-    id: string;
-    name: string;
-    description: string;
-    author: string;
-    version: string;
-    installed: boolean;
-}
+import ModInfoModal from "../components/ModInfoModal";
 
 const Home: React.FC = () => {
-    const [mods, setMods] = useState<Mod[]>([]);
+    const [mods, setMods] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedMod, setSelectedMod] = useState<any | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
-        // In a real app, this would fetch from the Electron main process
-        const fetchMods = async (): Promise<void> => {
-            // Simulate loading
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (isModalOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
 
-            // Mock data
-            const mockMods: Mod[] = [
-                {
-                    id: "1",
-                    name: "Dummy Mods",
-                    description: "This is a Dummy mod",
-                    author: "John Doe",
-                    version: "1.2.0",
-                    installed: true,
-                },
-                {
-                    id: "2",
-                    name: "DummyMod2",
-                    description:
-                        "This is a Dummy mod 2, with a longer description to test the layout",
-                    author: "Jane Doe",
-                    version: "0.9.5",
-                    installed: false,
-                },
-                {
-                    id: "3",
-                    name: "DummyMod 3 DX",
-                    description: "This is a Dummy mod 3",
-                    author: "John Doe",
-                    version: "2.1.0",
-                    installed: true,
-                },
-            ];
-
-            setMods(mockMods);
-            setIsLoading(false);
+        return () => {
+            document.body.style.overflow = 'unset';
         };
+    }, [isModalOpen]);
 
+    const fetchMods = async (force?: boolean): Promise<void> => {
+        // Simulate loading
+        if (force || !await window.api.modfetcher.modlistExists()) {
+            await window.api.modfetcher.refreshModList();
+        }
+
+        let loadedMods = await window.api.modfetcher.getModList();
+        setMods(loadedMods);
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
         fetchMods();
     }, []);
 
-    const filteredMods = mods.filter(
-        (mod) =>
-            mod.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            mod.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const refresh = async (): Promise<void> => {
+        setIsLoading(true);
+        await fetchMods(true);
+    };
 
-    const toggleModInstallation = (id: string): void => {
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+
+    useEffect(() => {
+        const timerId = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 300);
+
+        return () => {
+            clearTimeout(timerId);
+        };
+    }, [searchTerm]);
+
+    const filteredMods = mods.filter((mod) => {
+        const searchTermLower = debouncedSearchTerm.toLowerCase();
+        const titleLower = mod.title.toLowerCase();
+        const categoriesLower = mod.categories.map(category => category.toLowerCase());
+
+        if (debouncedSearchTerm === "") {
+            return true; // Don't filter if search term is empty
+        }
+
+        const fuzzyMatch = (str: string, pattern: string): boolean => {
+            pattern = pattern.split("").reduce((a, b) => a + ".*" + b);
+            return (new RegExp(pattern)).test(str);
+        }
+
+        return fuzzyMatch(titleLower, searchTermLower) || categoriesLower.some(category => fuzzyMatch(category, searchTermLower));
+    });
+
+    const toggleModInstallation = (title: string): void => {
         setMods(
             mods.map((mod) =>
-                mod.id === id ? { ...mod, installed: !mod.installed } : mod
+                mod.title === title ? { ...mod, installed: !mod.installed } : mod
             )
         );
     };
 
+    const openModal = (mod: any): void => {
+        setSelectedMod(mod);
+        setIsModalOpen(true);
+    };
+
+    const closeModal = (): void => {
+        setSelectedMod(null);
+        setIsModalOpen(false);
+    };
+
+    console.log(mods);
+
     return (
         <MainLayout>
-            <header className="mb-8">
-                <h1 className="text-5xl text-center mb-2 text-white">
-                    Pokerface
-                </h1>
-                <p className="text-xl text-center text-gray-300">
-                    Just a Balatro mod manager
-                </p>
+            <header className="sticky top-2 z-10 bg-[#162325] shadow-md p-4 mb-8 rounded-md border border-white/10">
+                <div className="container mx-auto flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-semibold text-white">
+                            Pokerface
+                        </h1>
+                        <p className="text-sm text-gray-300">
+                            Just a Balatro mod manager
+                        </p>
+                        <p className="text-sm text-gray-300">
+                            By Naamloos | Background: reactbits.dev | Font: m6x11 by Daniel Linssen.
+                        </p>
+                    </div>
+
+                    <div className="flex items-center space-x-4">
+                        <input
+                            type="text"
+                            placeholder="Search mods..."
+                            className="p-2 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-darker text-white text-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <button className="bg-blue-800 text-white px-3 py-1 rounded-md hover:bg-blue-700 cursor-pointer text-sm">
+                            Launch Balatro
+                        </button>
+                        <button className="bg-blue-800 text-white px-3 py-1 rounded-md hover:bg-blue-700 cursor-pointer text-sm"
+                            onClick={refresh}
+                        >
+                            Refresh Mods
+                        </button>
+                    </div>
+                </div>
             </header>
-
-            <div className="mb-6">
-                <input
-                    type="text"
-                    placeholder="Search mods..."
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-base text-lg"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </div>
-
-            <div className="mb-6 flex justify-between items-center text-lg">
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-                    Launch Balatro
-                </button>
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-                    Refresh Mods
-                </button>
-            </div>
 
             {isLoading ? (
                 <div className="flex justify-center items-center h-64">
-                    <p className="text-xl">Loading mods...</p>
+                    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {filteredMods.length > 0 ? (
                         filteredMods.map((mod) => (
                             <div
-                                key={mod.id}
-                                className="border rounded-md p-4 bg-base shadow-sm"
+                                key={mod.title}
+                                className="border rounded-md p-4 bg-base shadow-sm flex flex-col"
                             >
+                                {!mod.imageB64 && (
+                                    <div className="h-40 w-full bg-gray-700 rounded-md mb-4 flex items-center justify-center text-gray-400">
+                                        No Image
+                                    </div>
+                                )}
+                                {mod.imageB64 && (
+                                    <img
+                                        src={`data:image/jpg;base64,${mod.imageB64}`}
+                                        alt={`Thumbnail for ${mod.title}`}
+                                        className="mb-4 rounded-md h-40 w-full object-cover"
+                                    />
+                                )}
                                 <div className="flex justify-between items-start mb-2">
                                     <h3 className="text-2xl font-medium">
-                                        {mod.name}
+                                        {mod.title}
                                     </h3>
-                                    <span className="text-sm bg-gray-800 px-2 py-1 rounded-full">
-                                        {mod.version}
-                                    </span>
+                                    {mod.version && (
+                                        <span className="text-sm bg-gray-800 px-2 py-1 rounded-full">
+                                            {mod.version}
+                                        </span>
+                                    )}
                                 </div>
                                 <p className="text-gray-400 mb-3">
-                                    {mod.description}
+                                    Categories: {mod.categories.join(", ")}
                                 </p>
                                 <p className="text-md text-gray-300 mb-4">
                                     By {mod.author}
                                 </p>
-
-                                <button
-                                    onClick={() =>
-                                        toggleModInstallation(mod.id)
-                                    }
-                                    className={`${mod.installed ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"} text-white px-4 py-1 rounded-md w-full`}
-                                >
-                                    {mod.installed ? "Uninstall" : "Install"}
-                                </button>
+                                <div className="flex space-x-2 mt-auto">
+                                    <button
+                                        onClick={() =>
+                                            toggleModInstallation(mod.title)
+                                        }
+                                        className={`${mod.installed ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"} text-white px-4 py-1 rounded-md w-full`}
+                                    >
+                                        {mod.installed ? "Uninstall" : "Install"}
+                                    </button>
+                                    <button
+                                        onClick={() => openModal(mod)}
+                                        className="bg-gray-700 text-white px-2 py-1 rounded-md hover:bg-gray-600"
+                                    >
+                                        Info
+                                    </button>
+                                </div>
                             </div>
                         ))
                     ) : (
@@ -147,12 +193,11 @@ const Home: React.FC = () => {
                     )}
                 </div>
             )}
-
-            <footer className="mt-12 text-center text-gray-300 text-md bg-base w-fit m-auto px-2 rounded-md">
-                <p>
-                    &copy; Naamloos | Background: reactbits.dev | Font: m6x11 by Daniel Linssen.
-                </p>
-            </footer>
+            <ModInfoModal
+                isOpen={isModalOpen}
+                onClose={closeModal}
+                mod={selectedMod}
+            />
         </MainLayout>
     );
 };

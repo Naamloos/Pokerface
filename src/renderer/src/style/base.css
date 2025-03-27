@@ -13,6 +13,10 @@ body {
     overflow: -moz-scrollbars-none;
     -ms-overflow-style: none;
     font-family: 'm6x11plus', sans-serif; /* Apply the font to the body */
+    -webkit-user-select: none; /* Safari */
+    -moz-user-select: -moz-none; /* Firefox */
+    -ms-user-select: none; /* IE10+/Edge */
+    user-select: none; /* Standard */
 }
 
 .bg-base
