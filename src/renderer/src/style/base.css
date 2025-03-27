@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@font-face {
+    font-family: 'm6x11plus';
+    src: url('../assets/m6x11plus.ttf') format('truetype');
+}
+
+body::-webkit-scrollbar {
+    width: 0 !important;
+}
+
+body {
+    overflow: -moz-scrollbars-none;
+    -ms-overflow-style: none;
+    font-family: 'm6x11plus', sans-serif; /* Apply the font to the body */
+}
+
+.bg-base
+{
+    background-color: #000000CC;
+}
